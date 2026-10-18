@@ -1,0 +1,85 @@
+# CamWatch on the VPS: Tailscale (link to home LAN) + go2rtc + hub, routed by the existing Traefik.
+# go2rtc and the hub share the tailscale container's network so they can reach cameras over the tailnet.
+# Env needed: HUB_TOKEN, HUB_CAMERAS (compact JSON array), HUB_CODE_URL (raw URL of hub/server.mjs, pin to a commit), HUB_CODE_SHA256, CAM1_URL (RTSP url as seen from the home LAN)
+services:
+  tailscale:
+    image: tailscale/tailscale:stable
+    hostname: camwatch-vps
+    restart: unless-stopped
+    cap_add: [NET_ADMIN, NET_RAW]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_EXTRA_ARGS: --accept-routes
+    volumes:
+      - ts-state:/var/lib/tailscale
+    networks:
+      - traefik-proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-proxy
+      - traefik.http.routers.camwatch.rule=Host(`camwatch.hmongairevolution.com`)
+      - traefik.http.routers.camwatch.entrypoints=websecure
+      - traefik.http.routers.camwatch.tls=true
+      - traefik.http.routers.camwatch.tls.certresolver=letsencrypt
+      - traefik.http.routers.camwatch.service=camwatch
+      - traefik.http.services.camwatch.loadbalancer.server.port=8080
+      - traefik.http.routers.camwatch-http.rule=Host(`camwatch.hmongairevolution.com`)
+      - traefik.http.routers.camwatch-http.entrypoints=web
+      - traefik.http.routers.camwatch-http.middlewares=camwatch-redirect
+      - traefik.http.middlewares.camwatch-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.camwatch-redirect.redirectscheme.permanent=true
+
+  go2rtc:
+    image: alexxit/go2rtc
+    restart: unless-stopped
+    network_mode: service:tailscale
+    depends_on: [tailscale]
+    environment:
+      CAM1_URL: ${CAM1_URL}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /config
+        cat > /config/go2rtc.yaml <<EOF_G
+        api:
+          listen: "127.0.0.1:1984"
+        rtsp:
+          listen: "127.0.0.1:8554"
+        streams:
+          camera1: $$CAM1_URL
+        EOF_G
+        exec go2rtc -config /config/go2rtc.yaml
+
+  hub:
+    image: node:22-alpine
+    restart: unless-stopped
+    network_mode: service:tailscale
+    depends_on: [tailscale, go2rtc]
+    environment:
+      HUB_TOKEN: ${HUB_TOKEN}
+      HUB_CAMERAS: ${HUB_CAMERAS}
+      HUB_CODE_URL: ${HUB_CODE_URL}
+      HUB_CODE_SHA256: ${HUB_CODE_SHA256}
+      TZ: America/Chicago
+    volumes:
+      - hub-data:/data
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache ffmpeg tzdata >/dev/null
+        mkdir -p /app
+        wget -qO /app/server.mjs "$$HUB_CODE_URL"
+        echo "$$HUB_CODE_SHA256  /app/server.mjs" | sha256sum -c - || exit 1
+        exec node /app/server.mjs
+
+networks:
+  traefik-proxy:
+    external: true
+
+volumes:
+  ts-state:
+  hub-data:

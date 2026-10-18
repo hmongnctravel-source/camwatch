@@ -1,0 +1,12 @@
+# Copy to go2rtc.yaml and edit. Stream names must match "stream" in hub/config.json.
+# Use each camera's RTSP URL (yi-hack default: rtsp://IP:554/ch0_0.h264; add user:pass@ if you set one).
+# API and RTSP are bound to localhost: only the hub (which adds authentication) is exposed.
+api:
+  listen: "127.0.0.1:1984"
+rtsp:
+  listen: "127.0.0.1:8554"
+webrtc:
+  listen: "127.0.0.1:8555"
+streams:
+  front_door: rtsp://192.168.1.50:554/ch0_0.h264
+  backyard: rtsp://192.168.1.51:554/ch0_0.h264

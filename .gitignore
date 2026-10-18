@@ -1,0 +1,6 @@
+node_modules/
+.expo/
+dist/
+go2rtc/go2rtc.yaml
+hub/config.json
+data/

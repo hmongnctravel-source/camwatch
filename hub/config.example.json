@@ -1,0 +1,44 @@
+{
+  "port": 8080,
+  "token": "CHANGE-ME-to-a-long-random-string",
+  "dataDir": "/data",
+  "go2rtcUrl": "http://127.0.0.1:1984",
+  "go2rtcRtsp": "rtsp://127.0.0.1:8554",
+  "segmentSeconds": 60,
+  "retentionDays": 7,
+  "motionQuietSeconds": 10,
+  "notifyCooldownSeconds": 60,
+  "cameras": [
+    {
+      "id": "front_door",
+      "name": "Front door",
+      "stream": "front_door",
+      "record": "motion",
+      "motion": true,
+      "motionThreshold": 0.01,
+      "talk": true,
+      "ptz": {
+        "type": "onvif",
+        "url": "http://192.168.1.50/onvif/ptz_service",
+        "profile": "Profile_1"
+      }
+    },
+    {
+      "id": "backyard",
+      "name": "Backyard",
+      "stream": "backyard",
+      "record": "continuous",
+      "motion": true,
+      "ptz": {
+        "type": "http",
+        "urls": {
+          "left": "http://192.168.1.51/cgi-bin/ptz.sh?dir=left",
+          "right": "http://192.168.1.51/cgi-bin/ptz.sh?dir=right",
+          "up": "http://192.168.1.51/cgi-bin/ptz.sh?dir=up",
+          "down": "http://192.168.1.51/cgi-bin/ptz.sh?dir=down",
+          "stop": "http://192.168.1.51/cgi-bin/ptz.sh?dir=stop"
+        }
+      }
+    }
+  ]
+}

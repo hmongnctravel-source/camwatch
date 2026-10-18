@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "CamWatch",
+    "slug": "camwatch",
+    "version": "1.0.0",
+    "scheme": "camwatch",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router",
+      ["expo-video", { "supportsBackgroundPlayback": false, "supportsPictureInPicture": true }],
+      ["expo-audio", { "microphonePermission": "CamWatch uses the microphone so you can talk through your cameras." }],
+      "expo-notifications"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": { "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true } }
+    },
+    "android": { "usesCleartextTraffic": true }
+  }
+}

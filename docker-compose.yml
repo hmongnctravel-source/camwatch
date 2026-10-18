@@ -1,0 +1,19 @@
+services:
+  go2rtc:
+    image: alexxit/go2rtc
+    network_mode: host # reaches cameras on your LAN; API/RTSP are bound to localhost (see go2rtc.yaml)
+    restart: unless-stopped
+    volumes:
+      - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml
+
+  hub:
+    build: ./hub
+    network_mode: host # talks to go2rtc on localhost and to cameras (PTZ) on your LAN
+    restart: unless-stopped
+    depends_on: [go2rtc]
+    environment:
+      CONFIG: /config/config.json
+      TZ: America/Chicago # set to your timezone; recording filenames and day grouping use it
+    volumes:
+      - ./hub/config.json:/config/config.json:ro
+      - ./data:/data

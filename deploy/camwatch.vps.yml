@@ -1,6 +1,7 @@
 # CamWatch on the VPS: Tailscale (link to home LAN) + go2rtc + hub, routed by the existing Traefik.
 # go2rtc and the hub share the tailscale container's network so they can reach cameras over the tailnet.
-# Env needed: HUB_TOKEN, HUB_CAMERAS (compact JSON array), HUB_CODE_URL (raw URL of hub/server.mjs, pin to a commit), HUB_CODE_SHA256, CAM1_URL (RTSP url as seen from the home LAN)
+# Env needed: TS_AUTHKEY (Tailscale auth key; without it the container loops on interactive login), HUB_TOKEN, HUB_CAMERAS (compact JSON array), HUB_CODE_URL (raw URL of hub/server.mjs, pin to a commit), HUB_CODE_SHA256,
+# GO2RTC_STREAMS = "name=src1|src2;name2=src" (sources as seen from the home LAN; "|" adds extra sources to one stream)
 services:
   tailscale:
     image: tailscale/tailscale:stable
@@ -11,6 +12,8 @@ services:
       - /dev/net/tun:/dev/net/tun
     environment:
       TS_STATE_DIR: /var/lib/tailscale
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_AUTH_ONCE: "true"
       TS_USERSPACE: "false"
       TS_EXTRA_ARGS: --accept-routes
     volumes:
@@ -38,19 +41,19 @@ services:
     network_mode: service:tailscale
     depends_on: [tailscale]
     environment:
-      CAM1_URL: ${CAM1_URL}
+      GO2RTC_STREAMS: ${GO2RTC_STREAMS}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         mkdir -p /config
-        cat > /config/go2rtc.yaml <<EOF_G
-        api:
-          listen: "127.0.0.1:1984"
-        rtsp:
-          listen: "127.0.0.1:8554"
-        streams:
-          camera1: $$CAM1_URL
-        EOF_G
+        {
+          printf 'api:\n  listen: "127.0.0.1:1984"\nrtsp:\n  listen: "127.0.0.1:8554"\nstreams:\n'
+          printf '%s\n' "$$GO2RTC_STREAMS" | tr ';' '\n' | while IFS= read -r line; do
+            [ -z "$$line" ] && continue
+            printf '  %s:\n' "$${line%%=*}"
+            printf '%s\n' "$${line#*=}" | tr '|' '\n' | while IFS= read -r src; do printf '    - "%s"\n' "$$src"; done
+          done
+        } > /config/go2rtc.yaml
         exec go2rtc -config /config/go2rtc.yaml
 
   hub:

@@ -236,8 +236,23 @@ async function push(title, body, data) {
 
 // ---------- PTZ ----------
 const ONVIF_NS = 'http://www.onvif.org/ver20/ptz/wsdl';
-const soap = body =>
-  `<?xml version="1.0"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"><s:Body>${body}</s:Body></s:Envelope>`;
+const xmlEsc = s => String(s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
+// WS-Security UsernameToken (password digest), which Tapo and most ONVIF cameras require.
+const wsseHeader = (user, pass) => {
+  const nonce = crypto.randomBytes(16);
+  const created = new Date().toISOString();
+  const digest = crypto.createHash('sha1').update(Buffer.concat([nonce, Buffer.from(created), Buffer.from(pass)])).digest('base64');
+  return (
+    '<s:Header><Security s:mustUnderstand="1" xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">' +
+    `<UsernameToken><Username>${xmlEsc(user)}</Username>` +
+    `<Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">${digest}</Password>` +
+    `<Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">${nonce.toString('base64')}</Nonce>` +
+    `<Created xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">${created}</Created>` +
+    '</UsernameToken></Security></s:Header>'
+  );
+};
+const soap = (body, auth) =>
+  `<?xml version="1.0"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">${auth ? wsseHeader(auth.username, auth.password) : ''}<s:Body>${body}</s:Body></s:Envelope>`;
 const VEL = { left: [-0.5, 0], right: [0.5, 0], up: [0, 0.5], down: [0, -0.5] };
 
 async function ptz(c, dir, ms) {
@@ -252,7 +267,15 @@ async function ptz(c, dir, ms) {
   }
   // ONVIF
   const send = body =>
-    fetch(p.url, { method: 'POST', headers: { 'content-type': 'application/soap+xml' }, body: soap(body), signal: AbortSignal.timeout(5000) });
+    fetch(p.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/soap+xml' },
+      body: soap(body, p.username ? p : null),
+      signal: AbortSignal.timeout(5000),
+    }).then(r => {
+      if (!r.ok) throw new Error(`camera PTZ error: HTTP ${r.status}`);
+      return r;
+    });
   const stop = () =>
     send(`<Stop xmlns="${ONVIF_NS}"><ProfileToken>${p.profile ?? 'Profile_1'}</ProfileToken><PanTilt>true</PanTilt><Zoom>true</Zoom></Stop>`);
   if (dir === 'stop') return void (await stop());

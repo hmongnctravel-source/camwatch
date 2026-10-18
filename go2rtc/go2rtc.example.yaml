@@ -1,5 +1,4 @@
-# Copy to go2rtc.yaml and edit. Stream names must match "stream" in hub/config.json.
-# Use each camera's RTSP URL (yi-hack default: rtsp://IP:554/ch0_0.h264; add user:pass@ if you set one).
+# Copy to go2rtc.yaml and edit. Stream names must match "stream" / "motionStream" in hub/config.json.
 # API and RTSP are bound to localhost: only the hub (which adds authentication) is exposed.
 api:
   listen: "127.0.0.1:1984"
@@ -8,5 +7,15 @@ rtsp:
 webrtc:
   listen: "127.0.0.1:8555"
 streams:
-  front_door: rtsp://192.168.1.50:554/ch0_0.h264
-  backyard: rtsp://192.168.1.51:554/ch0_0.h264
+  # Tapo: create a "Camera Account" in the Tapo app (Camera settings > Advanced) and use it here.
+  # stream1 = high quality, stream2 = low quality (used for motion detection to save CPU).
+  front_door:
+    - rtsp://CAMERA-USER:CAMERA-PASS@192.168.1.20:554/stream1
+    # Optional two-way audio (talk-back) for Tapo; uses your TP-Link cloud password:
+    # - tapo://TPLINK-CLOUD-PASSWORD@192.168.1.20
+  front_door_sd:
+    - rtsp://CAMERA-USER:CAMERA-PASS@192.168.1.20:554/stream2
+  backyard:
+    - rtsp://CAMERA-USER:CAMERA-PASS@192.168.1.21:554/stream1
+  backyard_sd:
+    - rtsp://CAMERA-USER:CAMERA-PASS@192.168.1.21:554/stream2

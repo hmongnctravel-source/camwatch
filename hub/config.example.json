@@ -13,32 +13,26 @@
       "id": "front_door",
       "name": "Front door",
       "stream": "front_door",
+      "motionStream": "front_door_sd",
       "record": "motion",
       "motion": true,
-      "motionThreshold": 0.01,
       "talk": true,
       "ptz": {
         "type": "onvif",
-        "url": "http://192.168.1.50/onvif/ptz_service",
-        "profile": "Profile_1"
+        "url": "http://192.168.1.20:2020/onvif/service",
+        "profile": "profile_1",
+        "username": "CAMERA-ACCOUNT-USER",
+        "password": "CAMERA-ACCOUNT-PASSWORD"
       }
     },
     {
       "id": "backyard",
       "name": "Backyard",
       "stream": "backyard",
-      "record": "continuous",
+      "motionStream": "backyard_sd",
+      "record": "motion",
       "motion": true,
-      "ptz": {
-        "type": "http",
-        "urls": {
-          "left": "http://192.168.1.51/cgi-bin/ptz.sh?dir=left",
-          "right": "http://192.168.1.51/cgi-bin/ptz.sh?dir=right",
-          "up": "http://192.168.1.51/cgi-bin/ptz.sh?dir=up",
-          "down": "http://192.168.1.51/cgi-bin/ptz.sh?dir=down",
-          "stop": "http://192.168.1.51/cgi-bin/ptz.sh?dir=stop"
-        }
-      }
+      "talk": false
     }
   ]
 }
